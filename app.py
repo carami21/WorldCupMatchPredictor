@@ -10,7 +10,7 @@ Run:
   python app.py             (dev, port 5000)
   flask run --port 5000
 """
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from itertools import combinations
 from pathlib import Path
@@ -26,7 +26,7 @@ from group_stage import _predict_match, _simulate_group, SIMS
 
 MODEL_PATH = Path("models/model.joblib")
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="static", static_url_path="/static")
 CORS(app)
 
 # ── Load model once at startup ────────────────────────────────────────────────
@@ -61,15 +61,7 @@ def team_not_found(name: str) -> dict:
 # ── Routes ────────────────────────────────────────────────────────────────────
 @app.get("/")
 def index():
-    return jsonify({
-        "name": "World Cup Match Outcome Predictor API",
-        "endpoints": {
-            "GET  /health": "Health check",
-            "GET  /api/teams": "List all valid team names",
-            "POST /api/predict": "Predict a single match outcome",
-            "POST /api/group": "Simulate a full group stage (4 teams)",
-        }
-    })
+    return send_from_directory("static", "index.html")
 
 
 @app.get("/api/teams")

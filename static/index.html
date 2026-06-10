@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FIFA World Cup 2026 — Match Predictor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ─── Hero Section with 3D Ball ─────────────────────────────────── -->
+<section id="hero">
+  <div class="hero-bg"></div>
+  <div id="ball-container"></div>
+  <div class="hero-content">
+    <div class="hero-badge">FIFA WORLD CUP 2026</div>
+    <h1>Match <span class="gradient-text">Predictor</span></h1>
+    <p class="hero-sub">AI-powered match outcome predictions using Elo ratings, team form &amp; Monte Carlo simulations</p>
+    <a href="#predictor" class="cta-btn">Predict a Match</a>
+  </div>
+  <div class="scroll-indicator">
+    <span>Scroll</span>
+    <div class="scroll-arrow"></div>
+  </div>
+</section>
+
+<!-- ─── Pitch / Predictor Section ─────────────────────────────────── -->
+<section id="predictor">
+  <div class="pitch-wrapper">
+    <div class="pitch">
+      <div class="pitch-surface">
+        <!-- Pitch markings -->
+        <div class="center-circle"></div>
+        <div class="center-line"></div>
+        <div class="center-spot"></div>
+        <div class="penalty-area left"></div>
+        <div class="penalty-area right"></div>
+        <div class="goal-area left"></div>
+        <div class="goal-area right"></div>
+        <div class="penalty-spot left"></div>
+        <div class="penalty-spot right"></div>
+        <div class="penalty-arc left"></div>
+        <div class="penalty-arc right"></div>
+        <div class="corner-arc top-left"></div>
+        <div class="corner-arc top-right"></div>
+        <div class="corner-arc bottom-left"></div>
+        <div class="corner-arc bottom-right"></div>
+
+        <!-- Prediction Card overlaid on pitch -->
+        <div class="predict-card">
+          <h2>Predict Match Outcome</h2>
+          <div class="match-setup">
+            <div class="team-select-group">
+              <label>Home Team</label>
+              <div class="select-wrapper">
+                <input type="text" id="home-team" placeholder="Search team..." autocomplete="off">
+                <div class="team-dropdown" id="home-dropdown"></div>
+              </div>
+            </div>
+            <div class="vs-badge">VS</div>
+            <div class="team-select-group">
+              <label>Away Team</label>
+              <div class="select-wrapper">
+                <input type="text" id="away-team" placeholder="Search team..." autocomplete="off">
+                <div class="team-dropdown" id="away-dropdown"></div>
+              </div>
+            </div>
+          </div>
+          <div class="neutral-toggle">
+            <label class="toggle">
+              <input type="checkbox" id="neutral-venue" checked>
+              <span class="toggle-slider"></span>
+            </label>
+            <span>Neutral Venue</span>
+          </div>
+          <button id="predict-btn" class="predict-btn">Predict</button>
+          <div id="predict-error" class="error-msg"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Results Section ───────────────────────────────────────────── -->
+<section id="results" class="hidden">
+  <div class="results-container">
+    <div class="result-header">
+      <span id="res-home" class="team-name"></span>
+      <span class="vs-text">vs</span>
+      <span id="res-away" class="team-name"></span>
+    </div>
+    <div id="res-label" class="prediction-label"></div>
+
+    <div class="prob-bars">
+      <div class="prob-row">
+        <span class="prob-label" id="prob-home-label">Home Win</span>
+        <div class="prob-track">
+          <div class="prob-fill home" id="prob-home-bar"></div>
+        </div>
+        <span class="prob-pct" id="prob-home-pct"></span>
+      </div>
+      <div class="prob-row">
+        <span class="prob-label">Draw</span>
+        <div class="prob-track">
+          <div class="prob-fill draw" id="prob-draw-bar"></div>
+        </div>
+        <span class="prob-pct" id="prob-draw-pct"></span>
+      </div>
+      <div class="prob-row">
+        <span class="prob-label" id="prob-away-label">Away Win</span>
+        <div class="prob-track">
+          <div class="prob-fill away" id="prob-away-bar"></div>
+        </div>
+        <span class="prob-pct" id="prob-away-pct"></span>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-title">Elo Rating</div>
+        <div class="stat-row">
+          <span id="stat-home-elo" class="stat-val"></span>
+          <span class="stat-divider">—</span>
+          <span id="stat-away-elo" class="stat-val"></span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-title">Recent Form</div>
+        <div class="stat-row">
+          <span id="stat-home-form" class="stat-val"></span>
+          <span class="stat-divider">—</span>
+          <span id="stat-away-form" class="stat-val"></span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-title">Avg Goals Scored</div>
+        <div class="stat-row">
+          <span id="stat-home-goals" class="stat-val"></span>
+          <span class="stat-divider">—</span>
+          <span id="stat-away-goals" class="stat-val"></span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-title">Avg Goals Conceded</div>
+        <div class="stat-row">
+          <span id="stat-home-conc" class="stat-val"></span>
+          <span class="stat-divider">—</span>
+          <span id="stat-away-conc" class="stat-val"></span>
+        </div>
+      </div>
+    </div>
+
+    <button id="reset-btn" class="reset-btn">New Prediction</button>
+  </div>
+</section>
+
+<!-- ─── Group Stage Simulator ─────────────────────────────────────── -->
+<section id="group-sim">
+  <div class="section-container">
+    <h2 class="section-title">Group Stage Simulator</h2>
+    <p class="section-sub">Select 4 teams to simulate a full group stage with Monte Carlo analysis</p>
+    <div class="group-teams">
+      <div class="group-team-input" data-idx="0">
+        <label>Team 1</label>
+        <input type="text" class="group-team" placeholder="Search team..." autocomplete="off">
+        <div class="team-dropdown group-dropdown"></div>
+      </div>
+      <div class="group-team-input" data-idx="1">
+        <label>Team 2</label>
+        <input type="text" class="group-team" placeholder="Search team..." autocomplete="off">
+        <div class="team-dropdown group-dropdown"></div>
+      </div>
+      <div class="group-team-input" data-idx="2">
+        <label>Team 3</label>
+        <input type="text" class="group-team" placeholder="Search team..." autocomplete="off">
+        <div class="team-dropdown group-dropdown"></div>
+      </div>
+      <div class="group-team-input" data-idx="3">
+        <label>Team 4</label>
+        <input type="text" class="group-team" placeholder="Search team..." autocomplete="off">
+        <div class="team-dropdown group-dropdown"></div>
+      </div>
+    </div>
+    <button id="group-btn" class="predict-btn">Simulate Group</button>
+    <div id="group-error" class="error-msg"></div>
+
+    <div id="group-results" class="hidden">
+      <h3 class="group-results-title">Group Standings</h3>
+      <table class="standings-table">
+        <thead>
+          <tr>
+            <th>#</th><th>Team</th><th>xPts</th><th>Elo</th><th>Form</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="standings-body"></tbody>
+      </table>
+
+      <h3 class="group-results-title">Monte Carlo Qualification (%)</h3>
+      <div id="monte-carlo-bars"></div>
+
+      <h3 class="group-results-title">Match Predictions</h3>
+      <div id="group-matches"></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>World Cup 2026 Match Predictor &mdash; Powered by ML &amp; Elo Ratings</p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
