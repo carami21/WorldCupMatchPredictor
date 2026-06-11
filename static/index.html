@@ -6,8 +6,7 @@
   <title>FIFA World Cup 2026 — Match Predictor</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
@@ -189,14 +188,16 @@
 
     <div id="group-results" class="hidden">
       <h3 class="group-results-title">Group Standings</h3>
-      <table class="standings-table">
-        <thead>
-          <tr>
-            <th>#</th><th>Team</th><th>xPts</th><th>Elo</th><th>Form</th><th>Status</th>
-          </tr>
-        </thead>
-        <tbody id="standings-body"></tbody>
-      </table>
+      <div class="standings-table-wrap">
+        <table class="standings-table">
+          <thead>
+            <tr>
+              <th>#</th><th>Team</th><th>xPts</th><th>Elo</th><th>Form</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="standings-body"></tbody>
+        </table>
+      </div>
 
       <h3 class="group-results-title">Monte Carlo Qualification (%)</h3>
       <div id="monte-carlo-bars"></div>

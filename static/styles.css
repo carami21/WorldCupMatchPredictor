@@ -65,6 +65,22 @@ body {
   height: 100vh;
   z-index: 1;
   pointer-events: none;
+  overflow: hidden;
+}
+
+#css-ball {
+  position: absolute;
+  border-radius: 50%;
+  background:
+    url('https://d8j0ntlcm91z4.cloudfront.net/user_3ExTZ9Vq14Pkl2Niqqh4XjCKsoZ/hf_20260610_201403_485a5271-928f-421a-851c-5caaa9d95c12.png')
+    center / cover no-repeat;
+  /* Sphere depth: inner glow + outer shadow */
+  box-shadow:
+    inset -28px -20px 60px rgba(0, 0, 0, 0.55),
+    inset 14px 10px 40px rgba(255, 255, 255, 0.18),
+    0 30px 80px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255,255,255,0.06);
+  will-change: transform, opacity, width, height, left, top;
 }
 
 .hero-content {
@@ -170,7 +186,7 @@ body {
 
 #predictor {
   position: relative;
-  padding: 80px 20px;
+  padding: 80px 20px 60px;
   display: flex;
   justify-content: center;
 }
@@ -212,13 +228,11 @@ body {
   content: '';
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(180deg, rgba(0,0,0,0.08) 0%, transparent 20%, transparent 80%, rgba(0,0,0,0.12) 100%);
+  background: linear-gradient(180deg, rgba(0,0,0,0.08) 0%, transparent 20%, transparent 80%, rgba(0,0,0,0.12) 100%);
   z-index: 1;
   pointer-events: none;
 }
 
-/* Pitch markings hidden — the Higgsfield background image provides realistic markings */
 .center-line, .center-circle, .center-spot,
 .penalty-area, .goal-area, .penalty-spot,
 .penalty-arc, .corner-arc {
@@ -238,9 +252,8 @@ body {
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--glass-border);
   border-radius: 16px;
-  padding: 36px 32px;
-  width: 90%;
-  max-width: 520px;
+  padding: 32px 28px;
+  width: min(90%, 520px);
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
 }
 
@@ -781,12 +794,90 @@ footer {
 
 /* ─── Responsive ────────────────────────────────────────────────── */
 
+/* Tablet */
+@media (max-width: 900px) {
+  .pitch-surface { padding-top: 75%; }
+  .predict-card { padding: 28px 22px; }
+}
+
+/* Mobile */
 @media (max-width: 640px) {
-  .match-setup { flex-direction: column; align-items: center; }
-  .vs-badge { padding: 0; }
-  .stats-grid { grid-template-columns: 1fr; }
-  .group-teams { grid-template-columns: 1fr; }
-  .predict-card { padding: 24px 18px; }
-  .result-header { flex-direction: column; gap: 4px; }
-  .team-name { font-size: 1.2rem; }
+  /* Hero */
+  .hero-content h1 { font-size: clamp(2.2rem, 11vw, 3rem); }
+  .hero-sub { font-size: 0.95rem; }
+
+  /* Pitch: stack card below image on small screens */
+  #predictor { padding: 40px 16px 40px; }
+  .pitch-wrapper { perspective: none; }
+  .pitch { transform: none !important; border-radius: 10px; }
+
+  .pitch-surface {
+    padding-top: 56%;
+    background-position: center top;
+  }
+
+  /* Card comes out of absolute positioning and stacks below */
+  .pitch-surface {
+    display: flex;
+    flex-direction: column;
+    padding-top: 0;
+    height: auto;
+  }
+
+  .pitch-surface .predict-card {
+    position: static;
+    transform: none;
+    width: 100%;
+    max-width: 100%;
+    border-radius: 0 0 10px 10px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    box-shadow: none;
+  }
+
+  /* Pitch image shown as a fixed-height strip above card */
+  .pitch-surface::after {
+    content: '';
+    display: block;
+    width: 100%;
+    height: 160px;
+    background:
+      url('https://d8j0ntlcm91z4.cloudfront.net/user_3ExTZ9Vq14Pkl2Niqqh4XjCKsoZ/hf_20260610_201410_03de2ff6-0d37-4e63-9e54-6aae9885ab85.png')
+      center / cover no-repeat;
+    order: -1;
+    pointer-events: none;
+  }
+
+  .pitch-surface::before { display: none; }
+
+  /* Match setup: stack vertically */
+  .match-setup { flex-direction: column; align-items: stretch; gap: 8px; }
+  .vs-badge { padding: 4px 0; text-align: center; }
+
+  /* Results */
+  #results { padding: 32px 16px 48px; }
+  .results-container { padding: 28px 18px; border-radius: 16px; }
+  .result-header { flex-direction: column; gap: 2px; }
+  .team-name { font-size: 1.15rem; }
+  .stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-val { font-size: 1rem; }
+  .prob-label { width: 72px; font-size: 0.75rem; }
+
+  /* Group sim */
+  #group-sim { padding: 48px 16px 64px; }
+  .section-title { font-size: 1.5rem; }
+  .group-teams { grid-template-columns: 1fr; gap: 12px; }
+
+  /* Standings table: horizontal scroll */
+  .standings-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 8px;
+  }
+  .standings-table { min-width: 380px; }
+  .standings-table th,
+  .standings-table td { padding: 10px 8px; font-size: 0.82rem; }
+
+  /* Match cards: stack */
+  .group-match-card { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .gm-prediction { font-size: 0.75rem; }
 }
