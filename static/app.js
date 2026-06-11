@@ -5,64 +5,192 @@
 const API = window.location.origin;
 let ALL_TEAMS = [];
 
-// ─── CSS Soccer Ball with Higgsfield Photo ─────────────────────────
+// ─── Three.js Soccer Ball ──────────────────────────────────────────
 (function initBall() {
   const container = document.getElementById('ball-container');
 
-  // Create the ball element using the original Higgsfield photo
-  const ballEl = document.createElement('div');
-  ballEl.id = 'css-ball';
-  container.appendChild(ballEl);
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 100);
+  camera.position.set(0, 0, 4.5);
 
-  let scrollY = 0;
-  let targetScrollY = 0;
-  let idleAngle = 0;
-  let lastTime = 0;
+  const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  container.appendChild(renderer.domElement);
 
-  window.addEventListener('scroll', () => {
-    targetScrollY = window.scrollY;
-  }, { passive: true });
+  // Lighting — key + fill + rim for a realistic leather look
+  scene.add(new THREE.AmbientLight(0xffffff, 0.55));
 
-  function animate(time) {
-    requestAnimationFrame(animate);
+  const key = new THREE.DirectionalLight(0xfff8f0, 1.3);
+  key.position.set(4, 6, 5);
+  scene.add(key);
 
-    const dt = Math.min(time - lastTime, 50);
-    lastTime = time;
+  const fill = new THREE.DirectionalLight(0xd0e8ff, 0.35);
+  fill.position.set(-4, 2, 3);
+  scene.add(fill);
 
-    scrollY += (targetScrollY - scrollY) * 0.08;
+  const rim = new THREE.PointLight(0xf5c518, 0.5, 18);
+  rim.position.set(0, -4, 2);
+  scene.add(rim);
 
-    const vh = window.innerHeight;
-    const vw = window.innerWidth;
-    const scrollPct = Math.min(Math.max(scrollY / (vh * 0.75), 0), 1);
+  // ── Build equirectangular soccer ball texture ──────────────────
+  // Pentagons placed at the 12 icosahedron face-center positions in UV space.
+  // U = longitude / 2π  (0→1 wraps around sphere)
+  // V = latitude / π    (0=north pole, 1=south pole)
+  const W = 2048, H = 1024;
+  const tc = document.createElement('canvas');
+  tc.width = W; tc.height = H;
+  const ctx = tc.getContext('2d');
 
-    // Ball size: responsive
-    const baseSize = Math.min(vw * 0.55, vh * 0.65, 520);
-    const size = baseSize * (1 - scrollPct * 0.28);
+  // Ivory leather base
+  ctx.fillStyle = '#f2f0ea';
+  ctx.fillRect(0, 0, W, H);
 
-    // Position: starts centered-left, rolls off to the right and down
-    const startX = vw * 0.28 - size / 2;
-    const startY = vh * 0.5 - size / 2;
-    const x = startX + scrollPct * vw * 0.85;
-    const y = startY + scrollPct * vh * 0.55;
-
-    // Rolling rotation: scroll-driven + idle spin
-    idleAngle += dt * 0.04;
-    const rollDeg = scrollY * 0.45 + idleAngle;
-
-    // Fade out as it exits
-    const opacity = Math.max(0, 1 - scrollPct * 1.3);
-
-    ballEl.style.cssText = `
-      width: ${size}px;
-      height: ${size}px;
-      left: ${x}px;
-      top: ${y}px;
-      opacity: ${opacity};
-      transform: rotate(${rollDeg}deg);
-    `;
+  // Leather grain
+  for (let i = 0; i < 80000; i++) {
+    ctx.fillStyle = `rgba(0,0,0,${0.015 + Math.random() * 0.03})`;
+    ctx.fillRect(Math.random() * W, Math.random() * H, 1.5, 1.5);
   }
 
-  requestAnimationFrame(animate);
+  // 12 pentagon centres in UV (u,v) — icosahedron vertices
+  const phi = (1 + Math.sqrt(5)) / 2; // golden ratio
+  const icosa = [
+    [0, 1, phi], [0, -1, phi], [0, 1, -phi], [0, -1, -phi],
+    [1, phi, 0], [-1, phi, 0], [1, -phi, 0], [-1, -phi, 0],
+    [phi, 0, 1], [-phi, 0, 1], [phi, 0, -1], [-phi, 0, -1],
+  ].map(([x, y, z]) => {
+    const len = Math.sqrt(x*x + y*y + z*z);
+    const nx = x/len, ny = y/len, nz = z/len;
+    const lat = Math.acos(Math.max(-1, Math.min(1, ny)));   // 0..π
+    const lon = Math.atan2(nz, nx) + Math.PI;               // 0..2π
+    return { u: lon / (2 * Math.PI), v: lat / Math.PI };
+  });
+
+  // Pentagon radius in UV-pixels — large enough to tile properly
+  const PR = 175;
+
+  // Draw each pentagon (and a mirrored copy for the seam)
+  function drawPentagon(u, v, r) {
+    const cx = u * W, cy = v * H;
+    [-1, 0, 1].forEach(wrap => {
+      const ox = cx + wrap * W;
+      ctx.beginPath();
+      for (let i = 0; i < 5; i++) {
+        const a = (Math.PI * 2 * i / 5) - Math.PI / 2;
+        const px = ox + r * Math.cos(a);
+        const py = cy + r * Math.sin(a);
+        i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+
+      // Gradient fill: dark center fading to deep-black edge
+      const grd = ctx.createRadialGradient(ox, cy, 0, ox, cy, r);
+      grd.addColorStop(0, '#2a2a2a');
+      grd.addColorStop(1, '#0d0d0d');
+      ctx.fillStyle = grd;
+      ctx.fill();
+
+      // Seam highlight
+      ctx.strokeStyle = 'rgba(200,200,200,0.35)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    });
+  }
+
+  // Draw connecting seam lines between nearby pentagons
+  function seamLine(u1, v1, u2, v2) {
+    ctx.beginPath();
+    ctx.moveTo(u1 * W, v1 * H);
+    ctx.lineTo(u2 * W, v2 * H);
+    ctx.strokeStyle = 'rgba(80,80,80,0.4)';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+  }
+
+  // Seams first (behind pentagons)
+  for (let i = 0; i < icosa.length; i++) {
+    for (let j = i + 1; j < icosa.length; j++) {
+      const du = Math.abs(icosa[i].u - icosa[j].u);
+      const dv = Math.abs(icosa[i].v - icosa[j].v);
+      const dist = Math.sqrt(Math.min(du, 1 - du) ** 2 + dv ** 2);
+      if (dist < 0.38) seamLine(icosa[i].u, icosa[i].v, icosa[j].u, icosa[j].v);
+    }
+  }
+
+  icosa.forEach(({ u, v }) => drawPentagon(u, v, PR));
+
+  const ballTex = new THREE.CanvasTexture(tc);
+  ballTex.wrapS = THREE.RepeatWrapping;
+
+  // Bump map from seams only
+  const bc = document.createElement('canvas');
+  bc.width = 1024; bc.height = 512;
+  const bx = bc.getContext('2d');
+  bx.fillStyle = '#808080';
+  bx.fillRect(0, 0, 1024, 512);
+  icosa.forEach(({ u, v }) => {
+    const cx = u * 1024, cy = v * 512;
+    bx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const a = (Math.PI * 2 * i / 5) - Math.PI / 2;
+      const px = cx + 86 * Math.cos(a), py = cy + 86 * Math.sin(a);
+      i === 0 ? bx.moveTo(px, py) : bx.lineTo(px, py);
+    }
+    bx.closePath();
+    bx.strokeStyle = '#404040';
+    bx.lineWidth = 5;
+    bx.stroke();
+  });
+  const bumpTex = new THREE.CanvasTexture(bc);
+
+  const ball = new THREE.Mesh(
+    new THREE.SphereGeometry(1, 64, 64),
+    new THREE.MeshPhysicalMaterial({
+      map: ballTex,
+      bumpMap: bumpTex,
+      bumpScale: 0.04,
+      roughness: 0.42,
+      metalness: 0.0,
+      clearcoat: 0.4,
+      clearcoatRoughness: 0.2,
+      reflectivity: 0.55,
+    })
+  );
+  scene.add(ball);
+
+  // ── Scroll animation ───────────────────────────────────────────
+  let scrollY = 0, targetScrollY = 0;
+
+  window.addEventListener('scroll', () => { targetScrollY = window.scrollY; }, { passive: true });
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  function animate() {
+    requestAnimationFrame(animate);
+    scrollY += (targetScrollY - scrollY) * 0.08;
+
+    const pct = Math.min(Math.max(scrollY / (window.innerHeight * 0.8), 0), 1);
+
+    // Roll rightward and downward, shrink and fade
+    ball.position.x = -1.2 + pct * 7;
+    ball.position.y = 0.3 - pct * 3.2;
+    const s = 1 - pct * 0.3;
+    ball.scale.setScalar(s);
+
+    // Rolling rotation driven by scroll + slow idle spin
+    ball.rotation.z = -(scrollY * 0.008);
+    ball.rotation.x =  (scrollY * 0.003);
+    ball.rotation.y += 0.003;
+
+    camera.position.z = 4.5 + pct * 2.5;
+    container.style.opacity = Math.max(0, 1 - pct * 1.2).toString();
+
+    renderer.render(scene, camera);
+  }
+  animate();
 })();
 
 // ─── Load Teams ────────────────────────────────────────────────────

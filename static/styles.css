@@ -68,20 +68,6 @@ body {
   overflow: hidden;
 }
 
-#css-ball {
-  position: absolute;
-  border-radius: 50%;
-  background:
-    url('https://d8j0ntlcm91z4.cloudfront.net/user_3ExTZ9Vq14Pkl2Niqqh4XjCKsoZ/hf_20260610_201403_485a5271-928f-421a-851c-5caaa9d95c12.png')
-    center / cover no-repeat;
-  /* Sphere depth: inner glow + outer shadow */
-  box-shadow:
-    inset -28px -20px 60px rgba(0, 0, 0, 0.55),
-    inset 14px 10px 40px rgba(255, 255, 255, 0.18),
-    0 30px 80px rgba(0, 0, 0, 0.45),
-    0 0 0 1px rgba(255,255,255,0.06);
-  will-change: transform, opacity, width, height, left, top;
-}
 
 .hero-content {
   position: relative;
