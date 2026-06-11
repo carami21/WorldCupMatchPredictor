@@ -21,9 +21,51 @@ python fetch_data.py
 python train.py
 ```
 
+## Running the Web App
+
+The project includes a full web frontend with a 3D soccer ball, realistic pitch, and interactive prediction UI.
+
+```bash
+# 1. Make sure the model is trained first
+python fetch_data.py
+python train.py
+
+# 2. Start the Flask server
+python app.py
+
+# 3. Open in your browser
+#    http://localhost:5001
+```
+
+The web app features:
+- **3D soccer ball** in the hero section that rolls as you scroll
+- **Realistic soccer pitch** background on the prediction form
+- **Match predictor** — search and select two teams, get probability bars and stats
+- **Group stage simulator** — pick 4 teams, see standings and Monte Carlo qualification odds
+
+### Testing the API directly
+
+```bash
+# Health check
+curl http://localhost:5001/health
+
+# List all teams
+curl http://localhost:5001/api/teams
+
+# Predict a match
+curl -X POST http://localhost:5001/api/predict \
+  -H "Content-Type: application/json" \
+  -d '{"home": "Brazil", "away": "Argentina", "neutral": true}'
+
+# Simulate a group stage
+curl -X POST http://localhost:5001/api/group \
+  -H "Content-Type: application/json" \
+  -d '{"teams": ["Brazil", "Argentina", "Mexico", "United States"]}'
+```
+
 ## Usage
 
-### Predict a match
+### Predict a match (CLI)
 
 ```bash
 python predict.py "Brazil" "Argentina"
@@ -104,13 +146,18 @@ Built at kick-off with no data leakage:
 ## Project Structure
 ```
 WorldCupMatchPredictor/
+├── app.py             # Flask API + static file server
 ├── fetch_data.py      # Download the dataset
 ├── elo.py             # Custom Elo rating engine
 ├── features.py        # Vectorized feature engineering
 ├── train.py           # Model training + evaluation plots
 ├── predict.py         # CLI match predictor
 ├── group_stage.py     # Group stage simulator (Monte Carlo)
-└── requirements.txt
+├── requirements.txt
+└── static/
+    ├── index.html     # Web frontend (single-page app)
+    ├── styles.css     # Styling (dark theme, pitch, glassmorphism)
+    └── app.js         # Three.js 3D ball, scroll animation, API calls
 ```
 
 > Data, models, and plots are excluded from the repo — regenerated locally by running `fetch_data.py` and `train.py`.

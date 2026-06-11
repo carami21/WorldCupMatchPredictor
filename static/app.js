@@ -35,45 +35,112 @@ let ALL_TEAMS = [];
   rimLight.position.set(0, -3, 3);
   scene.add(rimLight);
 
-  // Soccer ball — use Higgsfield-generated texture on a sphere
+  // Soccer ball — procedural texture that wraps fully around the sphere
   const ballGeo = new THREE.SphereGeometry(1, 64, 64);
 
-  // Load the Higgsfield-generated soccer ball as a texture
-  const loader = new THREE.TextureLoader();
-  loader.setCrossOrigin('anonymous');
+  // Build a seamless soccer ball texture on canvas
+  const texSize = 2048;
+  const texCanvas = document.createElement('canvas');
+  texCanvas.width = texSize;
+  texCanvas.height = texSize;
+  const ctx = texCanvas.getContext('2d');
 
-  const ballTexture = loader.load(
-    'https://d8j0ntlcm91z4.cloudfront.net/user_3ExTZ9Vq14Pkl2Niqqh4XjCKsoZ/hf_20260610_201403_485a5271-928f-421a-851c-5caaa9d95c12.png'
-  );
+  // White leather base
+  ctx.fillStyle = '#f5f5f0';
+  ctx.fillRect(0, 0, texSize, texSize);
 
-  // Create seam bump map procedurally
+  // Subtle leather grain noise
+  for (let i = 0; i < 60000; i++) {
+    const gx = Math.random() * texSize;
+    const gy = Math.random() * texSize;
+    const ga = 0.02 + Math.random() * 0.04;
+    ctx.fillStyle = `rgba(0,0,0,${ga})`;
+    ctx.fillRect(gx, gy, 1, 1);
+  }
+
+  // Pentagon positions distributed across the UV map for full sphere coverage
+  const panels = [
+    { x: 256,  y: 256,  r: 160, dark: true  },
+    { x: 768,  y: 256,  r: 160, dark: false },
+    { x: 1280, y: 256,  r: 160, dark: true  },
+    { x: 1792, y: 256,  r: 160, dark: false },
+    { x: 512,  y: 680,  r: 170, dark: true  },
+    { x: 1024, y: 680,  r: 170, dark: true  },
+    { x: 1536, y: 680,  r: 170, dark: true  },
+    { x: 256,  y: 1100, r: 165, dark: false },
+    { x: 768,  y: 1100, r: 165, dark: true  },
+    { x: 1280, y: 1100, r: 165, dark: false },
+    { x: 1792, y: 1100, r: 165, dark: true  },
+    { x: 512,  y: 1520, r: 160, dark: true  },
+    { x: 1024, y: 1520, r: 160, dark: false },
+    { x: 1536, y: 1520, r: 160, dark: true  },
+    { x: 256,  y: 1840, r: 150, dark: false },
+    { x: 768,  y: 1840, r: 150, dark: true  },
+    { x: 1280, y: 1840, r: 150, dark: false },
+    { x: 1792, y: 1840, r: 150, dark: true  },
+  ];
+
+  panels.forEach(p => {
+    // Pentagon shape
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const angle = (Math.PI * 2 * i) / 5 - Math.PI / 2;
+      const px = p.x + p.r * Math.cos(angle);
+      const py = p.y + p.r * Math.sin(angle);
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+
+    if (p.dark) {
+      ctx.fillStyle = '#1a1a2e';
+      ctx.fill();
+    }
+
+    // Seam lines
+    ctx.strokeStyle = 'rgba(80, 80, 80, 0.6)';
+    ctx.lineWidth = 5;
+    ctx.stroke();
+  });
+
+  // Connecting seam lines between panels
+  ctx.strokeStyle = 'rgba(100, 100, 100, 0.35)';
+  ctx.lineWidth = 3;
+  for (let i = 0; i < panels.length; i++) {
+    for (let j = i + 1; j < panels.length; j++) {
+      const dx = panels[i].x - panels[j].x;
+      const dy = panels[i].y - panels[j].y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 550) {
+        ctx.beginPath();
+        ctx.moveTo(panels[i].x, panels[i].y);
+        ctx.lineTo(panels[j].x, panels[j].y);
+        ctx.stroke();
+      }
+    }
+  }
+
+  const ballTexture = new THREE.CanvasTexture(texCanvas);
+  ballTexture.wrapS = THREE.RepeatWrapping;
+  ballTexture.wrapT = THREE.ClampToEdgeWrapping;
+
+  // Bump map from same pattern
   const bumpCanvas = document.createElement('canvas');
   bumpCanvas.width = 1024;
   bumpCanvas.height = 1024;
   const bCtx = bumpCanvas.getContext('2d');
   bCtx.fillStyle = '#808080';
   bCtx.fillRect(0, 0, 1024, 1024);
-
-  const pentagons = [
-    { x: 512, y: 512, r: 140 },
-    { x: 200, y: 200, r: 120 },
-    { x: 824, y: 200, r: 120 },
-    { x: 200, y: 824, r: 120 },
-    { x: 824, y: 824, r: 120 },
-    { x: 100, y: 512, r: 110 },
-    { x: 924, y: 512, r: 110 },
-    { x: 512, y: 100, r: 110 },
-    { x: 512, y: 924, r: 110 },
-  ];
-  pentagons.forEach(p => {
+  const bScale = 1024 / texSize;
+  panels.forEach(p => {
     bCtx.beginPath();
     for (let i = 0; i < 5; i++) {
       const angle = (Math.PI * 2 * i) / 5 - Math.PI / 2;
-      bCtx.lineTo(p.x + p.r * Math.cos(angle), p.y + p.r * Math.sin(angle));
+      bCtx.lineTo(p.x * bScale + p.r * bScale * Math.cos(angle), p.y * bScale + p.r * bScale * Math.sin(angle));
     }
     bCtx.closePath();
-    bCtx.strokeStyle = '#555';
-    bCtx.lineWidth = 6;
+    bCtx.strokeStyle = '#404040';
+    bCtx.lineWidth = 4;
     bCtx.stroke();
   });
   const bumpTexture = new THREE.CanvasTexture(bumpCanvas);
@@ -81,13 +148,13 @@ let ALL_TEAMS = [];
   const ballMat = new THREE.MeshPhysicalMaterial({
     map: ballTexture,
     bumpMap: bumpTexture,
-    bumpScale: 0.03,
-    roughness: 0.35,
+    bumpScale: 0.035,
+    roughness: 0.38,
     metalness: 0.0,
-    clearcoat: 0.5,
-    clearcoatRoughness: 0.15,
+    clearcoat: 0.45,
+    clearcoatRoughness: 0.18,
     reflectivity: 0.6,
-    envMapIntensity: 1.0,
+    envMapIntensity: 0.9,
   });
 
   const ball = new THREE.Mesh(ballGeo, ballMat);
