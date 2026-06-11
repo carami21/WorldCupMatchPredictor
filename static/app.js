@@ -5,7 +5,7 @@
 const API = window.location.origin;
 let ALL_TEAMS = [];
 
-// ─── Three.js Soccer Ball ──────────────────────────────────────────
+// ─── Three.js World Cup Golden Globe ──────────────────────────────
 (function initBall() {
   const container = document.getElementById('ball-container');
 
@@ -16,147 +16,198 @@ let ALL_TEAMS = [];
   const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.1;
   container.appendChild(renderer.domElement);
 
-  // Lighting — key + fill + rim for a realistic leather look
-  scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+  // Dramatic trophy-style lighting
+  scene.add(new THREE.AmbientLight(0xfff5cc, 0.3));
 
-  const key = new THREE.DirectionalLight(0xfff8f0, 1.3);
-  key.position.set(4, 6, 5);
+  const key = new THREE.DirectionalLight(0xfffbe8, 2.2);
+  key.position.set(3, 5, 4);
   scene.add(key);
 
-  const fill = new THREE.DirectionalLight(0xd0e8ff, 0.35);
-  fill.position.set(-4, 2, 3);
+  const fill = new THREE.DirectionalLight(0xffe880, 0.5);
+  fill.position.set(-4, 1, 2);
   scene.add(fill);
 
-  const rim = new THREE.PointLight(0xf5c518, 0.5, 18);
-  rim.position.set(0, -4, 2);
+  // Strong overhead spot — the trophy's signature crown highlight
+  const spot = new THREE.PointLight(0xffffff, 3.5, 12);
+  spot.position.set(0, 4, 2);
+  scene.add(spot);
+
+  const rim = new THREE.PointLight(0xffd700, 1.0, 10);
+  rim.position.set(-2, -3, 3);
   scene.add(rim);
 
-  // ── Build equirectangular soccer ball texture ──────────────────
-  // Pentagons placed at the 12 icosahedron face-center positions in UV space.
-  // U = longitude / 2π  (0→1 wraps around sphere)
-  // V = latitude / π    (0=north pole, 1=south pole)
+  // ── Gold globe texture (equirectangular 2048×1024) ─────────────
+  // lon: −180→180 maps to u: 0→1   lat: 90→−90 maps to v: 0→1
   const W = 2048, H = 1024;
   const tc = document.createElement('canvas');
   tc.width = W; tc.height = H;
   const ctx = tc.getContext('2d');
 
-  // Ivory leather base
-  ctx.fillStyle = '#f2f0ea';
+  // Rich gold base gradient (dark at poles, bright at equator)
+  const baseGrad = ctx.createLinearGradient(0, 0, 0, H);
+  baseGrad.addColorStop(0,    '#7a5200');
+  baseGrad.addColorStop(0.25, '#c8860a');
+  baseGrad.addColorStop(0.5,  '#f0c040');
+  baseGrad.addColorStop(0.75, '#c8860a');
+  baseGrad.addColorStop(1,    '#7a5200');
+  ctx.fillStyle = baseGrad;
   ctx.fillRect(0, 0, W, H);
 
-  // Leather grain
-  for (let i = 0; i < 80000; i++) {
-    ctx.fillStyle = `rgba(0,0,0,${0.015 + Math.random() * 0.03})`;
-    ctx.fillRect(Math.random() * W, Math.random() * H, 1.5, 1.5);
+  // Subtle gold noise for texture variation
+  for (let i = 0; i < 60000; i++) {
+    const v = Math.random() > 0.5 ? 0.08 : -0.06;
+    ctx.fillStyle = `rgba(${v > 0 ? 255 : 0},${v > 0 ? 200 : 0},0,${Math.abs(v) * 0.4})`;
+    ctx.fillRect(Math.random() * W, Math.random() * H, 2, 2);
   }
 
-  // 12 pentagon centres in UV (u,v) — icosahedron vertices
-  const phi = (1 + Math.sqrt(5)) / 2; // golden ratio
-  const icosa = [
-    [0, 1, phi], [0, -1, phi], [0, 1, -phi], [0, -1, -phi],
-    [1, phi, 0], [-1, phi, 0], [1, -phi, 0], [-1, -phi, 0],
-    [phi, 0, 1], [-phi, 0, 1], [phi, 0, -1], [-phi, 0, -1],
-  ].map(([x, y, z]) => {
-    const len = Math.sqrt(x*x + y*y + z*z);
-    const nx = x/len, ny = y/len, nz = z/len;
-    const lat = Math.acos(Math.max(-1, Math.min(1, ny)));   // 0..π
-    const lon = Math.atan2(nz, nx) + Math.PI;               // 0..2π
-    return { u: lon / (2 * Math.PI), v: lat / Math.PI };
-  });
-
-  // Pentagon radius in UV-pixels — large enough to tile properly
-  const PR = 175;
-
-  // Draw each pentagon (and a mirrored copy for the seam)
-  function drawPentagon(u, v, r) {
-    const cx = u * W, cy = v * H;
-    [-1, 0, 1].forEach(wrap => {
-      const ox = cx + wrap * W;
-      ctx.beginPath();
-      for (let i = 0; i < 5; i++) {
-        const a = (Math.PI * 2 * i / 5) - Math.PI / 2;
-        const px = ox + r * Math.cos(a);
-        const py = cy + r * Math.sin(a);
-        i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
-      }
-      ctx.closePath();
-
-      // Gradient fill: dark center fading to deep-black edge
-      const grd = ctx.createRadialGradient(ox, cy, 0, ox, cy, r);
-      grd.addColorStop(0, '#2a2a2a');
-      grd.addColorStop(1, '#0d0d0d');
-      ctx.fillStyle = grd;
-      ctx.fill();
-
-      // Seam highlight
-      ctx.strokeStyle = 'rgba(200,200,200,0.35)';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-    });
+  // Helper: convert (lon °, lat °) → canvas (x, y)
+  function ll(lon, lat) {
+    return [(lon + 180) / 360 * W, (90 - lat) / 180 * H];
   }
 
-  // Draw connecting seam lines between nearby pentagons
-  function seamLine(u1, v1, u2, v2) {
+  // Draw continent as filled + stroked path
+  function drawContinent(pts, label) {
     ctx.beginPath();
-    ctx.moveTo(u1 * W, v1 * H);
-    ctx.lineTo(u2 * W, v2 * H);
-    ctx.strokeStyle = 'rgba(80,80,80,0.4)';
+    pts.forEach(([lon, lat], i) => {
+      const [x, y] = ll(lon, lat);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.closePath();
+    // Dark embossed gold fill
+    ctx.fillStyle = 'rgba(90, 50, 0, 0.55)';
+    ctx.fill();
+    // Bright ridge line — the emboss highlight
+    ctx.strokeStyle = 'rgba(255, 230, 100, 0.7)';
     ctx.lineWidth = 2.5;
     ctx.stroke();
   }
 
-  // Seams first (behind pentagons)
-  for (let i = 0; i < icosa.length; i++) {
-    for (let j = i + 1; j < icosa.length; j++) {
-      const du = Math.abs(icosa[i].u - icosa[j].u);
-      const dv = Math.abs(icosa[i].v - icosa[j].v);
-      const dist = Math.sqrt(Math.min(du, 1 - du) ** 2 + dv ** 2);
-      if (dist < 0.38) seamLine(icosa[i].u, icosa[i].v, icosa[j].u, icosa[j].v);
-    }
+  // ── Simplified continent outlines (lon, lat) ──────────────────
+  const continents = [
+    // North America
+    [[-168,72],[-140,74],[-110,76],[-85,73],[-65,68],[-55,60],
+     [-53,47],[-66,44],[-70,42],[-75,35],[-80,25],[-88,16],
+     [-83,9],[-77,8],[-62,11],[-60,6],[-52,4],[-52,10],
+     [-58,15],[-74,18],[-84,22],[-90,18],[-97,22],[-105,20],
+     [-110,27],[-117,32],[-120,34],[-123,49],[-130,55],
+     [-140,60],[-152,60],[-163,60],[-168,66]],
+    // South America
+    [[-82,8],[-77,8],[-62,11],[-60,6],[-50,4],[-48,0],
+     [-50,-5],[-36,-5],[-35,-8],[-38,-12],[-40,-20],
+     [-43,-23],[-48,-28],[-52,-33],[-58,-38],[-62,-42],
+     [-65,-46],[-67,-52],[-68,-56],[-65,-56],[-63,-52],
+     [-60,-50],[-55,-46],[-50,-30],[-48,-28],[-45,-24],
+     [-42,-22],[-48,-15],[-50,-5],[-58,2],[-62,6],[-72,10],[-77,8]],
+    // Europe
+    [[-10,36],[-5,36],[0,40],[3,43],[8,44],[14,44],[20,42],
+     [26,41],[28,42],[30,46],[29,50],[24,55],[20,56],
+     [18,58],[16,58],[14,56],[10,55],[8,57],[5,58],
+     [2,51],[-2,49],[-5,48],[-8,44],[-8,40],[-10,36]],
+    // Scandinavia
+    [[5,58],[8,57],[10,55],[12,56],[14,56],[16,58],[18,60],
+     [20,62],[22,65],[26,70],[28,72],[24,72],[18,70],
+     [14,68],[12,65],[8,62],[5,60],[5,58]],
+    // Africa
+    [[-18,16],[-16,20],[-18,24],[-14,28],[-8,32],[-2,35],
+     [4,37],[8,36],[12,34],[16,32],[20,30],[24,28],
+     [28,24],[34,22],[38,18],[42,14],[44,10],[42,4],
+     [40,0],[38,-4],[36,-8],[34,-12],[32,-16],[28,-22],
+     [24,-26],[20,-28],[18,-34],[20,-36],[26,-34],[30,-32],
+     [32,-28],[34,-24],[36,-20],[38,-16],[40,-12],[40,-4],
+     [36,2],[30,4],[24,4],[20,6],[16,4],[12,4],[8,4],
+     [4,4],[0,6],[-4,5],[-8,6],[-12,8],[-16,12],[-18,16]],
+    // Asia (simplified)
+    [[26,42],[30,46],[34,48],[38,50],[44,52],[50,54],
+     [56,56],[60,58],[66,60],[72,62],[78,60],[82,56],
+     [88,52],[94,50],[100,50],[106,52],[110,54],[116,50],
+     [122,48],[128,44],[132,40],[136,36],[138,34],[136,30],
+     [130,26],[124,22],[120,20],[116,22],[112,20],[106,16],
+     [100,12],[98,8],[100,4],[104,2],[108,2],[112,4],
+     [108,8],[110,14],[116,18],[118,24],[116,28],[112,32],
+     [106,32],[102,28],[96,26],[90,24],[84,20],[80,14],
+     [76,10],[72,8],[68,8],[64,12],[60,14],[56,14],
+     [52,10],[50,14],[46,16],[42,14],[38,14],[34,12],
+     [30,12],[26,16],[22,18],[24,22],[26,26],[28,32],
+     [26,38],[26,42]],
+    // Indian subcontinent
+    [[66,24],[72,24],[76,22],[78,18],[80,14],[80,10],
+     [78,8],[76,8],[72,8],[68,8],[66,12],[64,16],[66,20],[66,24]],
+    // Australia
+    [[114,-22],[118,-20],[122,-18],[128,-14],[132,-12],
+     [136,-12],[138,-16],[136,-20],[132,-22],[136,-24],
+     [138,-28],[136,-32],[132,-34],[128,-36],[122,-34],
+     [116,-34],[114,-30],[112,-26],[114,-22]],
+    // Greenland
+    [[-52,82],[-28,84],[-18,78],[-16,72],[-24,68],
+     [-32,66],[-44,66],[-52,68],[-56,72],[-56,78],[-52,82]],
+    // Japan
+    [[130,34],[132,34],[134,34],[136,36],[138,38],[140,40],
+     [142,42],[140,44],[138,44],[136,40],[134,38],[132,36],[130,34]],
+  ];
+
+  continents.forEach(pts => drawContinent(pts));
+
+  // Latitude/longitude grid lines for the globe look
+  ctx.strokeStyle = 'rgba(180, 120, 0, 0.18)';
+  ctx.lineWidth = 1;
+  for (let lat = -80; lat <= 80; lat += 20) {
+    ctx.beginPath();
+    ctx.moveTo(0, (90 - lat) / 180 * H);
+    ctx.lineTo(W, (90 - lat) / 180 * H);
+    ctx.stroke();
+  }
+  for (let lon = -180; lon <= 180; lon += 30) {
+    ctx.beginPath();
+    ctx.moveTo((lon + 180) / 360 * W, 0);
+    ctx.lineTo((lon + 180) / 360 * W, H);
+    ctx.stroke();
   }
 
-  icosa.forEach(({ u, v }) => drawPentagon(u, v, PR));
+  const globeTex = new THREE.CanvasTexture(tc);
+  globeTex.wrapS = THREE.RepeatWrapping;
 
-  const ballTex = new THREE.CanvasTexture(tc);
-  ballTex.wrapS = THREE.RepeatWrapping;
-
-  // Bump map from seams only
+  // Bump map — continents raised above oceans
   const bc = document.createElement('canvas');
   bc.width = 1024; bc.height = 512;
   const bx = bc.getContext('2d');
-  bx.fillStyle = '#808080';
+  bx.fillStyle = '#606060'; // ocean: mid-gray
   bx.fillRect(0, 0, 1024, 512);
-  icosa.forEach(({ u, v }) => {
-    const cx = u * 1024, cy = v * 512;
+
+  function drawBump(pts) {
     bx.beginPath();
-    for (let i = 0; i < 5; i++) {
-      const a = (Math.PI * 2 * i / 5) - Math.PI / 2;
-      const px = cx + 86 * Math.cos(a), py = cy + 86 * Math.sin(a);
-      i === 0 ? bx.moveTo(px, py) : bx.lineTo(px, py);
-    }
+    pts.forEach(([lon, lat], i) => {
+      const x = (lon + 180) / 360 * 1024;
+      const y = (90 - lat) / 180 * 512;
+      i === 0 ? bx.moveTo(x, y) : bx.lineTo(x, y);
+    });
     bx.closePath();
-    bx.strokeStyle = '#404040';
-    bx.lineWidth = 5;
-    bx.stroke();
-  });
+    bx.fillStyle = '#c0c0c0'; // land raised (lighter = higher)
+    bx.fill();
+  }
+  continents.forEach(pts => drawBump(pts));
   const bumpTex = new THREE.CanvasTexture(bc);
 
-  const ball = new THREE.Mesh(
-    new THREE.SphereGeometry(1, 64, 64),
+  // ── Gold material ──────────────────────────────────────────────
+  const globe = new THREE.Mesh(
+    new THREE.SphereGeometry(1, 128, 128),
     new THREE.MeshPhysicalMaterial({
-      map: ballTex,
-      bumpMap: bumpTex,
-      bumpScale: 0.04,
-      roughness: 0.42,
-      metalness: 0.0,
-      clearcoat: 0.4,
-      clearcoatRoughness: 0.2,
-      reflectivity: 0.55,
+      map:               globeTex,
+      bumpMap:           bumpTex,
+      bumpScale:         0.06,
+      color:             new THREE.Color(1.0, 0.82, 0.18),
+      metalness:         0.88,
+      roughness:         0.12,
+      clearcoat:         1.0,
+      clearcoatRoughness:0.08,
+      reflectivity:      1.0,
+      envMapIntensity:   0.6,
     })
   );
-  scene.add(ball);
+  scene.add(globe);
 
   // ── Scroll animation ───────────────────────────────────────────
   let scrollY = 0, targetScrollY = 0;
@@ -171,19 +222,14 @@ let ALL_TEAMS = [];
   function animate() {
     requestAnimationFrame(animate);
     scrollY += (targetScrollY - scrollY) * 0.08;
-
     const pct = Math.min(Math.max(scrollY / (window.innerHeight * 0.8), 0), 1);
 
-    // Roll rightward and downward, shrink and fade
-    ball.position.x = -1.2 + pct * 7;
-    ball.position.y = 0.3 - pct * 3.2;
-    const s = 1 - pct * 0.3;
-    ball.scale.setScalar(s);
+    globe.position.x = -1.2 + pct * 7;
+    globe.position.y =  0.3 - pct * 3.2;
+    globe.scale.setScalar(1 - pct * 0.3);
 
-    // Rolling rotation driven by scroll + slow idle spin
-    ball.rotation.z = -(scrollY * 0.008);
-    ball.rotation.x =  (scrollY * 0.003);
-    ball.rotation.y += 0.003;
+    globe.rotation.y += 0.004;
+    globe.rotation.x  =  scrollY * 0.003;
 
     camera.position.z = 4.5 + pct * 2.5;
     container.style.opacity = Math.max(0, 1 - pct * 1.2).toString();
