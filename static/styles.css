@@ -806,48 +806,16 @@ footer {
   .hero-content h1 { font-size: clamp(2.2rem, 11vw, 3rem); }
   .hero-sub { font-size: 0.95rem; }
 
-  /* Pitch: stack card below image on small screens */
+  /* Pitch: taller surface so card fits without overflow */
   #predictor { padding: 40px 16px 40px; }
   .pitch-wrapper { perspective: none; }
   .pitch { transform: none !important; border-radius: 10px; }
-
-  .pitch-surface {
-    padding-top: 56%;
-    background-position: center top;
-  }
-
-  /* Card comes out of absolute positioning and stacks below */
-  .pitch-surface {
-    display: flex;
-    flex-direction: column;
-    padding-top: 0;
-    height: auto;
-  }
+  .pitch-surface { padding-top: 130%; }
 
   .pitch-surface .predict-card {
-    position: static;
-    transform: none;
-    width: 100%;
-    max-width: 100%;
-    border-radius: 0 0 10px 10px;
-    border-top: 1px solid rgba(255,255,255,0.06);
-    box-shadow: none;
+    width: 92%;
+    padding: 20px 16px;
   }
-
-  /* Pitch image shown as a fixed-height strip above card */
-  .pitch-surface::after {
-    content: '';
-    display: block;
-    width: 100%;
-    height: 160px;
-    background:
-      url('https://d8j0ntlcm91z4.cloudfront.net/user_3ExTZ9Vq14Pkl2Niqqh4XjCKsoZ/hf_20260610_201410_03de2ff6-0d37-4e63-9e54-6aae9885ab85.png')
-      center / cover no-repeat;
-    order: -1;
-    pointer-events: none;
-  }
-
-  .pitch-surface::before { display: none; }
 
   /* Match setup: stack vertically */
   .match-setup { flex-direction: column; align-items: stretch; gap: 8px; }
