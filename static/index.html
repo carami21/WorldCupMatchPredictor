@@ -14,7 +14,9 @@
 <!-- ─── Hero Section with 3D Ball ─────────────────────────────────── -->
 <section id="hero">
   <div class="hero-bg"></div>
-  <div id="ball-container"></div>
+  <div id="ball-container">
+    <div id="ball-underglow"></div>
+  </div>
   <div class="hero-content">
     <div class="hero-badge">FIFA WORLD CUP 2026</div>
     <h1>Match <span class="gradient-text">Predictor</span></h1>
@@ -206,6 +208,124 @@
       <h3 class="group-results-title">Match Predictions</h3>
       <div id="group-matches"></div>
     </div>
+  </div>
+</section>
+
+<!-- ─── Danger Zone Analysis ──────────────────────────────────────── -->
+<section id="xg-section">
+  <div class="xg-wrap">
+
+    <div class="xg-head">
+      <div class="hero-badge">EXPECTED GOALS MODEL</div>
+      <h2 class="section-title">Danger Zone Analysis</h2>
+      <p class="section-sub">Where the model says goals come from — vs. what actually happened</p>
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="xg-controls">
+      <div class="xg-control-team">
+        <label>Team</label>
+        <div class="select-wrapper">
+          <input type="text" id="xg-team" placeholder="Select a WC2022 team…" autocomplete="off">
+          <div class="team-dropdown" id="xg-dropdown"></div>
+        </div>
+      </div>
+      <div class="xg-context">
+        <div class="xg-pillset" data-group="body_part">
+          <span class="xg-pill-label">Body Part</span>
+          <div class="xg-pills">
+            <button class="xg-pill on" data-val="Right Foot">Right Foot</button>
+            <button class="xg-pill" data-val="Left Foot">Left Foot</button>
+            <button class="xg-pill" data-val="Head">Head</button>
+          </div>
+        </div>
+        <div class="xg-pillset" data-group="shot_type">
+          <span class="xg-pill-label">Shot Type</span>
+          <div class="xg-pills">
+            <button class="xg-pill on" data-val="Open Play">Open Play</button>
+            <button class="xg-pill" data-val="Free Kick">Free Kick</button>
+          </div>
+        </div>
+        <div class="xg-pillset" data-group="under_pressure">
+          <span class="xg-pill-label">Pressure</span>
+          <div class="xg-pills">
+            <button class="xg-pill on" data-val="false">Normal</button>
+            <button class="xg-pill" data-val="true">Under Pressure</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="xg-error" class="error-msg"></div>
+
+    <!-- BALL + STAT CARDS -->
+    <div class="xg-top-row">
+      <div class="xg-ball-col">
+        <div class="xg-ball" id="xg-ball"></div>
+        <div class="xg-ball-meta">
+          <div class="xg-xg">xG: <span id="xg-total">—</span></div>
+          <div class="xg-delta" id="xg-delta">Select a team to compare</div>
+          <div class="xg-matches" id="xg-matches"></div>
+        </div>
+      </div>
+
+      <div class="xg-stat-grid">
+        <div class="stat-card">
+          <div class="stat-title">Total Shots</div>
+          <div class="xg-stat-v" id="xg-shots">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-title">Shots / Game</div>
+          <div class="xg-stat-v" id="xg-spg">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-title">xG / Shot</div>
+          <div class="xg-stat-v" id="xg-xgps">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-title">Overperformance</div>
+          <div class="xg-vsbar"><i id="xg-vsfill"></i><span class="xg-vstick" id="xg-vstick"></span></div>
+          <div class="xg-vslabel" id="xg-vslabel">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN CANVAS: danger zones (Layer 1) + shots (Layer 2) -->
+    <div class="xg-pitch-block">
+      <div class="xg-pitch-wrap">
+        <canvas id="xg-heatmap"></canvas>
+        <div id="xg-canvas-hint" class="xg-canvas-hint">Model danger surface — select a team to overlay their WC2022 shots</div>
+        <div id="xg-tooltip" class="xg-tooltip"></div>
+      </div>
+      <div class="xg-legend">
+        <div class="xg-legend-grad">
+          <span class="lab">Low xG · 0.0</span>
+          <i class="xg-grad"></i>
+          <span class="lab">High xG · 0.6+</span>
+        </div>
+        <div class="xg-legend-icons">
+          <span><i class="xg-ic-shot"></i> Shot</span>
+          <span><i class="xg-ic-goal"></i> Goal</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- PLAYER LEADERBOARD -->
+    <div id="xg-board" class="hidden">
+      <h3 class="group-results-title">Player xG vs Goals</h3>
+      <div class="standings-table-wrap">
+        <table class="standings-table">
+          <thead>
+            <tr><th>#</th><th>Player</th><th>Shots</th><th>Goals</th><th>xG</th><th>xG/Shot</th><th>vs Expected</th></tr>
+          </thead>
+          <tbody id="xg-leaderboard"></tbody>
+        </table>
+      </div>
+      <div class="xg-callout">
+        <span class="ic">⚡</span>
+        <span>Players scoring more goals than their xG suggests are finishing above expectation — either clinical, lucky, or creating higher-quality chances than raw position implies.</span>
+      </div>
+    </div>
+
   </div>
 </section>
 

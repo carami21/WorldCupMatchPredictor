@@ -7,3 +7,6 @@ numpy
 joblib
 flask
 flask-cors
+xgboost
+statsbombpy
+pyarrow
